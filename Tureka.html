@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TUREKA — The Future of Music Listening</title>
+<meta name="description" content="TUREKA is being prepared. The future of music listening. Stay tuned.">
+<meta name="theme-color" content="#050705">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050705'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%231DB954' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.6' fill='%231ED760'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050705;
+    --green:#1DB954;
+    --green-bright:#1ED760;
+    --text:#EDF2EE;
+    --text-dim:rgba(237,242,238,.56);
+    --text-faint:rgba(237,242,238,.32);
+    --line:rgba(237,242,238,.09);
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --display:'Clash Display','Segoe UI',sans-serif;
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--text);font-family:var(--display);
+    overflow:hidden;user-select:none;-webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;
+    touch-action:none;-webkit-font-smoothing:antialiased;
+  }
+  body.has-cursor, body.has-cursor *{cursor:none !important}
+  ::selection{background:var(--green);color:#03130a}
+  :focus-visible{outline:1px solid var(--green-bright);outline-offset:3px}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  /* ---------- 3D canvas ---------- */
+  #scene{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;opacity:0;transition:opacity 1.6s ease .1s}
+  body.ready #scene{opacity:1}
+
+  /* ---------- film grain ---------- */
+  .grain{
+    position:fixed;inset:-60%;z-index:40;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.35 0.35 0.35 0 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:grain .9s steps(1) infinite;
+  }
+  @keyframes grain{
+    0%,100%{transform:translate(0,0)} 20%{transform:translate(-1.5%,1%)}
+    40%{transform:translate(1%,-1.6%)} 60%{transform:translate(-1%,-.6%)} 80%{transform:translate(1.4%,1.2%)}
+  }
+
+  /* ---------- reveal system ---------- */
+  .rv{opacity:0;transform:translateY(16px);transition:opacity .9s var(--ease),transform .9s var(--ease);transition-delay:var(--d,0s)}
+  body.ready .rv{opacity:1;transform:none}
+
+  /* ---------- header ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:10;height:66px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 30px;border-bottom:1px solid var(--line);pointer-events:none;
+  }
+  .brand{display:flex;align-items:center;gap:11px;font-weight:600;font-size:15px;letter-spacing:.14em}
+  .brand svg{display:block}
+  .head-right{display:flex;align-items:center;gap:18px}
+  .status{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--text-dim)}
+  .status .dot{width:5px;height:5px;border-radius:50%;background:var(--green-bright);animation:blinkDot 1.25s ease-in-out infinite}
+  @keyframes blinkDot{0%,100%{opacity:1}50%{opacity:.25}}
+
+  /* ---------- main content ---------- */
+  main{
+    position:fixed;inset:66px 0 58px;z-index:4;display:flex;align-items:center;
+    padding:0 clamp(26px,6.5vw,108px);pointer-events:none;
+  }
+  .content{max-width:640px}
+  .eyebrow{display:flex;align-items:center;gap:11px;font-family:var(--mono);font-size:10.5px;letter-spacing:.28em;color:var(--text-dim)}
+  .pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--green-bright);position:relative;flex:none}
+  .pulse-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--green-bright);opacity:0;animation:ping 2.2s ease-out infinite}
+  @keyframes ping{0%{transform:scale(.4);opacity:.8}70%,100%{transform:scale(1.7);opacity:0}}
+
+  .wm{
+    display:flex;align-items:baseline;margin-top:20px;
+    font-size:clamp(3.4rem,12.5vw,10.75rem);font-weight:600;line-height:.92;letter-spacing:-.015em;
+  }
+  .wm .l{
+    display:inline-block;
+    clip-path:inset(110% -10% -25% -10%);transform:translateY(24%);
+    transition:clip-path 1s var(--ease) var(--d,0s),transform 1s var(--ease) var(--d,0s);
+  }
+  body.ready .wm .l{clip-path:inset(-25% -10% -25% -10%);transform:none}
+  .wm .l.pop{animation:letterPop .55s cubic-bezier(.34,1.56,.5,1)}
+  @keyframes letterPop{0%{transform:translateY(0)}35%{transform:translateY(-8.5%)}100%{transform:translateY(0)}}
+  .tick-wrap{align-self:center;display:inline-block;margin-left:.1em}
+  .tick{display:block;width:.11em;height:.6em;background:var(--green-bright);transform-origin:bottom;will-change:transform,opacity}
+
+  .tagline{margin-top:18px;font-size:clamp(1.3rem,2.4vw,1.9rem);font-weight:500;letter-spacing:.002em}
+  .tagline .end{color:var(--green-bright)}
+  .lede{max-width:46ch;margin-top:22px;font-size:15.5px;font-weight:400;line-height:1.75;letter-spacing:.01em;color:var(--text-dim)}
+
+  /* ---------- footer ---------- */
+  footer{
+    position:fixed;bottom:0;left:0;right:0;z-index:10;height:58px;pointer-events:none;
+    display:flex;align-items:center;justify-content:space-between;padding:0 30px;
+    border-top:1px solid var(--line);font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;color:var(--text-faint);
+  }
+  .sep{margin:0 10px;opacity:.5}
+  .foot-hint{position:absolute;left:50%;transform:translateX(-50%)}
+  .foot-progress{display:flex;align-items:center;gap:12px}
+  .fp-track{width:96px;height:2px;background:rgba(237,242,238,.12);position:relative;overflow:hidden}
+  #fpFill{position:absolute;left:0;top:0;bottom:0;width:67.9%;background:var(--green);transition:width .8s ease}
+  .fp-num{color:var(--text-dim);min-width:46px;text-align:right}
+
+  /* ---------- side note & corners ---------- */
+  .side-note{
+    position:fixed;right:27px;top:50%;transform:translateY(-50%);z-index:4;pointer-events:none;
+    writing-mode:vertical-rl;font-family:var(--mono);font-size:9px;letter-spacing:.34em;color:var(--text-faint);
+  }
+  .corner{position:fixed;z-index:4;font-family:var(--mono);font-size:13px;line-height:1;color:rgba(237,242,238,.28);pointer-events:none}
+  .c-tl{top:82px;left:22px}.c-tr{top:82px;right:22px}
+  .c-bl{bottom:72px;left:22px}.c-br{bottom:72px;right:22px}
+
+  /* ---------- loader ---------- */
+  .loader{
+    position:fixed;inset:0;z-index:100;background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    transition:opacity .7s ease;
+  }
+  .loader.done{opacity:0;pointer-events:none}
+  .loader-word{font-weight:600;font-size:15px;letter-spacing:.5em;margin-right:-.5em}
+  .loader-bar{width:130px;height:1px;background:rgba(237,242,238,.14);overflow:hidden}
+  .loader-bar span{display:block;height:100%;background:var(--green);transform-origin:left;animation:load 1.6s cubic-bezier(.65,.05,.36,1) infinite}
+  @keyframes load{0%{transform:scaleX(0)}60%,100%{transform:scaleX(1)}}
+  .loader-note{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--text-faint)}
+
+  /* ---------- custom cursor ---------- */
+  #cDot,#cRing{position:fixed;left:0;top:0;z-index:130;pointer-events:none;border-radius:50%;display:none;will-change:transform}
+  body.has-cursor #cDot,body.has-cursor #cRing{display:block}
+  #cDot{width:5px;height:5px;background:var(--green-bright)}
+  #cRing{width:34px;height:34px;border:1px solid rgba(30,215,96,.4);transition:border-color .25s ease}
+  #cRing.hov{border-color:rgba(30,215,96,.95)}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1150px){.side-note{display:none}}
+  @media (max-width:900px){
+    main{align-items:flex-end;padding-bottom:30px}
+  }
+  @media (max-width:640px){
+    header{padding:0 18px}
+    .status{display:none}
+    .brand{font-size:13px}
+    footer{padding:0 18px}
+    .foot-hint{display:none}
+    .corner{display:none}
+    main{padding:0 22px}
+  }
+  @media (max-height:640px){
+    .lede{margin-top:14px}
+    .wm{margin-top:14px}
+  }
+  @media (prefers-reduced-motion:reduce){.grain{animation:none}.pulse-dot::after{animation:none}}
+</style>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="corner c-tl" aria-hidden="true">+</div>
+<div class="corner c-tr" aria-hidden="true">+</div>
+<div class="corner c-bl" aria-hidden="true">+</div>
+<div class="corner c-br" aria-hidden="true">+</div>
+
+<header>
+  <div class="brand rv" style="--d:.1s">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.2" stroke="#1DB954" stroke-width="1.4"/>
+      <circle cx="12" cy="12" r="2.4" fill="#1ED760"/>
+      <path d="M12 12L18.6 5.4" stroke="#1ED760" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    TUREKA
+  </div>
+  <div class="head-right rv" style="--d:.2s">
+    <div class="status"><span class="dot"></span>IN THE STUDIO</div>
+  </div>
+</header>
+
+<aside class="side-note" aria-hidden="true">EST. MMXXV — BUILT BETWEEN BEATS — 96 BPM</aside>
+
+<main>
+  <div class="content">
+    <div class="eyebrow rv" style="--d:.02s">
+      <span class="pulse-dot"></span>PRE-RELEASE · SOMETHING IS TAKING SHAPE
+    </div>
+
+    <h1 class="wm" aria-label="TUREKA">
+      <span class="l" style="--d:.08s" aria-hidden="true">T</span>
+      <span class="l" style="--d:.13s" aria-hidden="true">U</span>
+      <span class="l" style="--d:.18s" aria-hidden="true">R</span>
+      <span class="l" style="--d:.23s" aria-hidden="true">E</span>
+      <span class="l" style="--d:.28s" aria-hidden="true">K</span>
+      <span class="l" style="--d:.33s" aria-hidden="true">A</span>
+      <span class="tick-wrap rv" style="--d:.55s" aria-hidden="true"><span class="tick" id="tick"></span></span>
+    </h1>
+
+    <p class="tagline rv" style="--d:.42s">The future of music listening<span class="end">.</span></p>
+
+    <p class="lede rv" style="--d:.5s">
+      TUREKA is being tuned behind closed doors — a new way to hear, built around
+      how you actually listen. We're not ready to show it yet. But the first
+      listen is closer than you think.
+    </p>
+
+  </div>
+</main>
+
+<footer>
+  <div class="rv" style="--d:.68s">© MMXXV TUREKA<span class="sep">/</span>ALL FREQUENCIES RESERVED</div>
+  <div class="foot-hint rv" id="hint" style="--d:.76s">DRAG TO ROTATE<span class="sep">·</span>CLICK TO PULSE<span class="sep">·</span>SCROLL TO ZOOM</div>
+  <div class="foot-progress rv" style="--d:.84s">
+    <span>ASSEMBLING</span>
+    <span class="fp-track"><span id="fpFill"></span></span>
+    <span class="fp-num" id="fpNum">67.9%</span>
+  </div>
+</footer>
+
+<div class="loader" id="loader" aria-hidden="true">
+  <div class="loader-word">TUREKA</div>
+  <div class="loader-bar"><span></span></div>
+  <div class="loader-note">CALIBRATING FREQUENCIES</div>
+</div>
+
+<div id="cDot" aria-hidden="true"></div>
+<div id="cRing" aria-hidden="true"></div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   utilities
+============================================================ */
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const damp = (c, t, l, dt) => c + (t - c) * (1 - Math.exp(-l * dt));
+const angDist = (a, b) => { const d = Math.abs(a - b) % TAU; return d > Math.PI ? TAU - d : d; };
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const finePointer = matchMedia('(pointer: fine)').matches;
+const isInteractive = (el) => !!(el && el.closest && el.closest('a, button, input, textarea, select, label'));
+/* ============================================================
+   the heartbeat — one clock drives cursor blink, ring pulse,
+   and (when audio is on) the music itself, so they never drift
+============================================================ */
+const BPM = 96;
+const SPB = 60 / BPM;
+const Beat = {
+  _ctx: null, _a0: 0, _p0: 0,
+  now() { return this._ctx ? this._ctx.currentTime - this._a0 : performance.now() / 1000 - this._p0; },
+  phase() { return this.now() % SPB; },
+  adopt(ctx, frac) { this._ctx = ctx; this._a0 = ctx.currentTime - frac * SPB; },
+  release() { const f = this.phase() / SPB; this._ctx = null; this._p0 = performance.now() / 1000 - f * SPB; }
+};
+
+/* ============================================================
+   three.js — the frequency field
+============================================================ */
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050705);
+scene.fog = new THREE.FogExp2(0x050705, 0.05);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 80);
+camera.position.set(0, 3.1, 12.12);
+
+// soft round sprite texture (for dust & the heart)
+function dotTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)');
+  gr.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+const softDot = dotTexture();
+
+// --- the ring of 192 bars ------------------------------------
+const ring = new THREE.Group();
+scene.add(ring);
+const N = 192, RADIUS = 5;
+const barGeo = new THREE.BoxGeometry(0.075, 1, 0.075);
+barGeo.translate(0, 0.5, 0); // pivot at the base
+const sideMat = new THREE.MeshBasicMaterial({ color: 0x8a8a8a });
+const topMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const bars = new THREE.InstancedMesh(barGeo, [sideMat, sideMat, topMat, sideMat, sideMat, sideMat], N);
+bars.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+ring.add(bars);
+const seedC = new THREE.Color(0x1db954);
+for (let i = 0; i < N; i++) bars.setColorAt(i, seedC);
+
+// faint mirrored copy — a sheen of reflection on the black floor
+const mirror = new THREE.InstancedMesh(barGeo,
+  new THREE.MeshBasicMaterial({ color: 0x1db954, transparent: true, opacity: 0.07, depthWrite: false }), N);
+mirror.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+ring.add(mirror);
+
+// guide circles + dial ticks
+function circleLine(r, opacity) {
+  const pts = [];
+  for (let i = 0; i <= 160; i++) {
+    const a = (i / 160) * TAU;
+    pts.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
+  }
+  return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0x1db954, transparent: true, opacity }));
+}
+ring.add(circleLine(RADIUS + 0.02, 0.3));
+ring.add(circleLine(RADIUS + 1.5, 0.13));
+ring.add(circleLine(1.15, 0.22));
+{
+  const pts = [], r1 = RADIUS + 1.5, segs = 72;
+  for (let i = 0; i < segs; i++) {
+    const a = (i / segs) * TAU, len = i % 6 === 0 ? 0.34 : 0.14;
+    pts.push(new THREE.Vector3(Math.cos(a) * r1, 0, Math.sin(a) * r1));
+    pts.push(new THREE.Vector3(Math.cos(a) * (r1 + len), 0, Math.sin(a) * (r1 + len)));
+  }
+  ring.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0x1db954, transparent: true, opacity: 0.22 })));
+}
+
+// degree labels — appear once the mono font is really loaded
+document.fonts.ready.then(() => {
+  [['000', 0], ['090', Math.PI * 0.5], ['180', Math.PI], ['270', Math.PI * 1.5]].forEach(([txt, a]) => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 96;
+    const g = c.getContext('2d');
+    g.font = '500 44px "IBM Plex Mono", monospace';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(29,185,84,0.85)';
+    g.fillText(txt, 128, 50);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(c), transparent: true, opacity: 0.5, depthWrite: false
+    }));
+    const r = RADIUS + 2.25;
+    sp.position.set(Math.cos(a) * r, 0.05, Math.sin(a) * r);
+    sp.scale.set(0.86, 0.32, 1);
+    ring.add(sp);
+  });
+});
+
+// the heart — a pulsing core on every beat
+const heart = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: softDot, color: 0x1ed760, transparent: true, opacity: 0.9,
+  depthWrite: false, blending: THREE.AdditiveBlending
+}));
+heart.position.set(0, 0.06, 0);
+heart.scale.setScalar(0.42);
+ring.add(heart);
+
+// drifting dust with parallax
+const dust = (() => {
+  const count = 320, pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * TAU, r = 5 + Math.random() * 14;
+    pos[i * 3] = Math.cos(a) * r;
+    pos[i * 3 + 1] = Math.random() * 7 - 2;
+    pos[i * 3 + 2] = Math.sin(a) * r;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const p = new THREE.Points(geo, new THREE.PointsMaterial({
+    map: softDot, color: 0x86e7a3, size: 0.09, transparent: true, opacity: 0.45,
+    depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true
+  }));
+  scene.add(p);
+  return p;
+})();
+
+/* ============================================================
+   interaction state
+============================================================ */
+const S = {
+  rotY: -0.4, rotYT: -0.4,
+  rotX: 0.3, rotXT: 0.3,
+  zoom: 0.42, zoomT: 0.42,
+  dragging: false, hoverAmp: 0, mouseAngle: 0, hasHit: false,
+  pulse: 0, waves: [],
+  ringScale: 1, ringScaleT: 1,
+  look: new THREE.Vector3(1.7, 0.4, 0), lookT: new THREE.Vector3(1.7, 0.4, 0),
+  parX: 0, parY: 0, idle: 0
+};
+
+function layout3D() {
+  const aspect = innerWidth / innerHeight;
+  if (aspect < 0.95) { S.ringPosT = { x: 0, y: 1.7 }; S.ringScaleT = 0.6; S.lookT.set(0, 0.8, 0); }
+  else if (aspect < 1.55) { S.ringPosT = { x: 2.2, y: 0.35 }; S.ringScaleT = 0.8; S.lookT.set(1.15, 0.4, 0); }
+  else { S.ringPosT = { x: 3.3, y: 0 }; S.ringScaleT = 0.95; S.lookT.set(1.7, 0.4, 0); }
+}
+
+const ndc = new THREE.Vector2(0, 0);
+const raycaster = new THREE.Raycaster();
+const planeY = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const hitWorld = new THREE.Vector3(), hitLocal = new THREE.Vector3();
+const setNDC = (e) => ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+
+function updateHit() {
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.ray.intersectPlane(planeY, hitWorld)) {
+    hitLocal.copy(hitWorld);
+    ring.worldToLocal(hitLocal);
+    S.mouseAngle = Math.atan2(hitLocal.z, hitLocal.x);
+    S.hasHit = true;
+  } else S.hasHit = false;
+}
+
+let lastX = 0, lastY = 0, downX = 0, downY = 0, downTime = 0, moved = 0;
+const cursorState = { down: false, hover: false };
+
+window.addEventListener('pointerdown', (e) => {
+  setNDC(e);
+  cursorState.down = true;
+  if (isInteractive(e.target)) return;
+  S.dragging = true; S.idle = 0;
+  lastX = downX = e.clientX; lastY = downY = e.clientY;
+  downTime = performance.now(); moved = 0;
+});
+window.addEventListener('pointermove', (e) => {
+  setNDC(e);
+  S.parX = ndc.x; S.parY = ndc.y;
+  cursor.move(e.clientX, e.clientY);
+  if (S.dragging) {
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    moved += Math.abs(dx) + Math.abs(dy);
+    S.rotYT += dx * 0.0045;
+    S.rotXT = clamp(S.rotXT + dy * 0.0035, -0.12, 0.62);
+    S.idle = 0;
+  }
+});
+window.addEventListener('pointerup', (e) => {
+  cursorState.down = false;
+  if (!S.dragging) return;
+  S.dragging = false;
+  setNDC(e);
+  updateHit();
+  if (moved < 7 && performance.now() - downTime < 350 && S.hasHit) {
+    S.waves.push({ a0: S.mouseAngle, t0: Beat.now() });
+    if (S.waves.length > 6) S.waves.shift();
+    S.pulse = Math.min(1.5, S.pulse + 0.55);
+  }
+});
+window.addEventListener('wheel', (e) => {
+  if (document.documentElement.scrollHeight > innerHeight + 4) return;
+  e.preventDefault();
+  S.zoomT = clamp(S.zoomT + e.deltaY * 0.0011, 0, 1);
+  S.idle = 0;
+}, { passive: false });
+
+/* ============================================================
+   custom cursor (fine pointers only)
+============================================================ */
+const cursor = (() => {
+  if (!finePointer) return { move() {}, tick() {} };
+  document.body.classList.add('has-cursor');
+  const dot = document.getElementById('cDot');
+  const ringEl = document.getElementById('cRing');
+  let x = innerWidth / 2, y = innerHeight / 2, rx = x, ry = y;
+  window.addEventListener('pointerover', (e) => {
+    const h = isInteractive(e.target);
+    cursorState.hover = h;
+    ringEl.classList.toggle('hov', h);
+  });
+  return {
+    move(nx, ny) { x = nx; y = ny; },
+    tick(dt) {
+      rx = damp(rx, x, 18, dt); ry = damp(ry, y, 18, dt);
+      const s = (cursorState.hover ? 1.7 : 1) * (cursorState.down ? 0.72 : 1);
+      dot.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) scale(${cursorState.hover ? 0.5 : 1})`;
+      ringEl.style.transform = `translate(${rx}px,${ry}px) translate(-50%,-50%) scale(${s})`;
+    }
+  };
+})();
+
+/* ============================================================
+   render loop
+============================================================ */
+const amps = new Float32Array(N);
+const dummy = new THREE.Object3D();
+const col = new THREE.Color();
+const dimC = new THREE.Color(0x11582b);
+const hotC = new THREE.Color(0x63f79b);
+const tick = document.getElementById('tick');
+let lastBeatIdx = -1, lastT = Beat.now();
+
+function frame() {
+  requestAnimationFrame(frame);
+  const t = Beat.now();
+  const dt = clamp(t - lastT, 0.001, 0.05);
+  lastT = t;
+
+  // heartbeat
+  const beatIdx = Math.floor(t / SPB);
+  if (beatIdx !== lastBeatIdx) {
+    lastBeatIdx = beatIdx;
+    S.pulse = Math.min(1.5, S.pulse + (reduced ? 0.25 : 1));
+  }
+  S.pulse *= Math.exp(-dt * 4.2);
+  const phase = Beat.phase() / SPB;
+
+  // rotation, position, camera — all damped
+  S.idle += dt;
+  if (!S.dragging && !reduced && S.idle > 1.6) S.rotYT += dt * 0.05;
+  S.rotY = damp(S.rotY, S.rotYT, 6, dt);
+  S.rotX = damp(S.rotX, S.rotXT, 6, dt);
+  ring.rotation.set(S.rotX, S.rotY, 0);
+  ring.position.x = damp(ring.position.x, S.ringPosT.x, 4, dt);
+  ring.position.y = damp(ring.position.y, S.ringPosT.y, 4, dt);
+  S.ringScale = damp(S.ringScale, S.ringScaleT, 4, dt);
+  ring.scale.setScalar(S.ringScale);
+  S.look.x = damp(S.look.x, S.lookT.x + S.parX * 0.35, 3.5, dt);
+  S.look.y = damp(S.look.y, S.lookT.y - S.parY * 0.22, 3.5, dt);
+  camera.lookAt(S.look);
+  S.zoom = damp(S.zoom, S.zoomT, 4, dt);
+  camera.position.z = 9.6 + S.zoom * 6;
+
+  dust.rotation.y += dt * 0.012;
+  dust.position.x = damp(dust.position.x, -S.parX * 0.5, 2, dt);
+  dust.position.y = damp(dust.position.y, S.parY * 0.3, 2, dt);
+
+  if (finePointer) updateHit(); else S.hasHit = false;
+  S.hoverAmp = damp(S.hoverAmp, S.hasHit && !S.dragging ? 1 : 0, 8, dt);
+
+  for (let w = S.waves.length - 1; w >= 0; w--) if (t - S.waves[w].t0 > 3.2) S.waves.splice(w, 1);
+
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * TAU;
+    let target;
+
+    // procedural spectrum — layered traveling waves around the circle
+    let v = 0.42
+      + 0.3 * Math.sin(a * 3 - t * 1.35)
+      + 0.17 * Math.sin(a * 7 + t * 2.1)
+      + 0.11 * Math.sin(a * 13 - t * 3.4 + Math.sin(t * 0.4) * 2);
+    v = clamp(v, 0.03, 1);
+    target = Math.pow(v, 1.8) * 1.25 + 0.05;
+
+    // ripple under the cursor
+    if (S.hoverAmp > 0.001) {
+      const d = angDist(a, S.mouseAngle);
+      target += (Math.exp(-d * d / 0.02) * 0.85 + Math.exp(-d * d / 0.12) * Math.sin(d * 16 - t * 9) * 0.4) * S.hoverAmp;
+    }
+    // click shockwaves traveling around the ring
+    for (const wv of S.waves) {
+      const age = t - wv.t0;
+      const d = angDist(a, wv.a0);
+      target += Math.exp(-((d - age * 2.3) ** 2) / 0.016) * 1.5 * Math.exp(-age * 1.5);
+    }
+    target = Math.max(target * (1 + S.pulse * 0.4), 0.02);
+
+    // meter ballistics: fast attack, slow release
+    const k = target > amps[i] ? 16 : 5;
+    amps[i] += (target - amps[i]) * (1 - Math.exp(-k * dt));
+
+    const h = 0.05 + amps[i] * 1.05;
+    const px = Math.cos(a) * RADIUS, pz = Math.sin(a) * RADIUS;
+    dummy.position.set(px, 0, pz);
+    dummy.rotation.set(0, -(a + Math.PI / 2), 0);
+    dummy.scale.set(1, h, 1);
+    dummy.updateMatrix();
+    bars.setMatrixAt(i, dummy.matrix);
+    dummy.position.y = -h;
+    dummy.updateMatrix();
+    mirror.setMatrixAt(i, dummy.matrix);
+
+    col.copy(dimC).lerp(hotC, clamp(amps[i] / 1.5, 0, 1));
+    bars.setColorAt(i, col);
+  }
+  bars.instanceMatrix.needsUpdate = true;
+  mirror.instanceMatrix.needsUpdate = true;
+  bars.instanceColor.needsUpdate = true;
+
+  heart.scale.setScalar(0.42 + S.pulse * 0.55);
+  heart.material.opacity = 0.75 + S.pulse * 0.25;
+
+  // the metronome tick after the wordmark
+  if (reduced) { tick.style.opacity = 1; }
+  else {
+    tick.style.opacity = phase < 0.45 ? 1 : 0.12;
+    tick.style.transform = `scaleY(${(1 + S.pulse * 0.35).toFixed(3)})`;
+  }
+
+  cursor.tick(dt);
+  renderer.render(scene, camera);
+}
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  layout3D();
+}
+addEventListener('resize', resize);
+resize();
+frame();
+
+/* ============================================================
+   UI wiring
+============================================================ */
+// playful letters
+document.querySelectorAll('.wm .l').forEach((el) => {
+  el.addEventListener('pointerenter', () => {
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  });
+});
+
+// touch hint wording
+if (!finePointer) {
+  document.getElementById('hint').innerHTML = 'DRAG TO ROTATE<span class="sep">·</span>TAP TO PULSE';
+}
+
+// "assembling" figure — quietly creeping upward, never done
+const fpNum = document.getElementById('fpNum'), fpFill = document.getElementById('fpFill');
+let prog = 67.9;
+setInterval(() => {
+  prog = Math.min(99.9, prog + Math.random() * 0.05);
+  fpNum.textContent = prog.toFixed(1) + '%';
+  fpFill.style.width = prog + '%';
+}, 900);
+
+/* ============================================================
+   loader → reveal
+============================================================ */
+Promise.race([
+  Promise.all([document.fonts.ready, new Promise(r => setTimeout(r, 1200))]),
+  new Promise(r => setTimeout(r, 3200))
+]).then(() => {
+  document.body.classList.add('ready');
+  const loader = document.getElementById('loader');
+  loader.classList.add('done');
+  setTimeout(() => loader.remove(), 900);
+});
+</script>
+</body>
+</html>
